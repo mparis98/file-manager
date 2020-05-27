@@ -5,25 +5,31 @@
     <link rel="stylesheet" href="./node_modules/bulma/css/bulma.css">
     <link rel="stylesheet" href="css/stylesheet.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="node_modules/electron-tabs/electron-tabs.css">
+    <link rel="stylesheet" href="node_modules/datatables.net-dt/css/jquery.dataTables.css">
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <title>Gestionnaire de fichier</title>
 </head>
 <body>
+
 <section class="section">
     <div class="container">
         <h1 class="title has-text-centered">Gestionnaire de fichier</h1>
         <div class="field">
             <div class="control">
-                <input id="filepicker" name="fileList" type="file" webkitdirectory />
+                <input id="filepicker" name="fileList" type="file" webkitdirectory/>
                 <input class="input is-info" type="text" name="path" id="inputPath" disabled>
             </div>
         </div>
     </div>
 </section>
 <section class="section">
-    <button class="button" id="backPath">Retour en arrière</button>
+    <div class="container">
+        <button class="button" id="backPath">Retour en arrière</button>
+        <button class="button" id="newTab">Nouvelle fenêtre</button>
+    </div>
     <div class="container scroll">
-        <table class="table">
+        <table class="display" id="table_id">
             <thead>
             <th>Type</th>
             <th>Nom</th>
@@ -37,8 +43,14 @@
 </section>
 
 <!-- You can also require other files to run in this process -->
-<script>window.$ = window.jQuery = require('jquery');</script>
+<script>var $ = require('jquery');
+require('datatables.net')(window, $);</script>
 <script src="renderer.js"></script>
 <script src="js/listing.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#table_id').DataTable();
+    });
+</script>
 </body>
 </html>
