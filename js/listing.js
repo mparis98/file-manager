@@ -1,16 +1,19 @@
-const paths = require("path")
-const fs = require("fs")
+const paths = require("path");
+const fs = require("fs");
 const swal = require('sweetalert2');
-const { shell } = require('electron')
+const {shell} = require('electron');
+const clipboardy = require('clipboardy');
 
+// ---------------------------- LISTE DES FICHIERS -----------------------------
 $(document).ready(function () {
     document.getElementById("filepicker").addEventListener("change", function (event) {
         var path = null;
         let files = event.target.files;
         var os = detectOs();
-        if (os == 'Mac OS' || os == 'iOS' || os == 'Linux' || os == 'Android'){
+        // Récupération du path sans le fichier selon l'os
+        if (os == 'Mac OS' || os == 'iOS' || os == 'Linux' || os == 'Android') {
             path = files[0].path.substr(0, files[0].path.lastIndexOf("/"));
-        } else{
+        } else {
             path = files[0].path.substr(0, files[0].path.lastIndexOf("'\'"));
         }
         readDirectory(path);
@@ -22,16 +25,17 @@ function readDirectory(directoryPath) {
     $('#inputPath').val(directoryPath);
     var t = $('#table_id').DataTable();
     t.clear().draw();
+    // Lecture du dossier
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
-            console.log("Error getting directory information.")
             swal.fire({
-                    title: 'Erreur !',
-                    text: 'Impossible de lire le contenu du dossier',
-                    icon: 'error',
-                    confirmButtonText: 'Ok'
-                })
+                title: 'Erreur !',
+                text: 'Impossible de lire le contenu du dossier',
+                icon: 'error',
+                confirmButtonText: 'Ok'
+            })
         } else {
+            // Création d'une ligne pour chaque fichier et dossier présent
             files.forEach(function (file) {
                 fs.stat(directoryPath + `/${file}`, function (err, stats) {
                     var column1 = null;
@@ -42,26 +46,26 @@ function readDirectory(directoryPath) {
                     var icon = '<span class="material-icons" style="color: blue;">\n' +
                         'description\n' +
                         '</span>';
-                    var trash = '<span name-file="'+file+'" class="deleteFile material-icons" style="color: red; cursor: pointer;">\n' +
+                    var trash = '<td><span name-file="' + file + '" class="deleteFile material-icons" style="color: red; cursor: pointer;">\n' +
                         'delete\n' +
-                        '</span>'
+                        '</span>' +
+                        '<span name-file="' + file + '" class="copyFile material-icons" style="color: red; cursor: pointer;">\n' +
+                        'file_copy\n' +
+                        '</span></td></tr>'
                     if (stats.isDirectory()) {
                         icon = '<span class="material-icons" style="color: gold;">\n' +
                             'folder\n' +
                             '</span>';
-                        column1 = '<tr id="'+file+'"><td>' + icon + '</td>';
+                        column1 = '<tr id="' + file + '"><td>' + icon + '</td>';
                         column2 = '<td><a id="nameDirectory" onclick="changeDirectory(event)">' + file + '</a></td>';
                         column3 = '<td>' + date.toLocaleString() + '</td>';
                         column4 = '<td></td></tr>'
-                        t.row.add([column1, column2, column3, column4]).draw( false );
-                        // console.log(t.row.add([column1.innerHTML, column2.innerHTML, column3.innerHTML]).draw( false ));
-                        // $("#bodyTable").append('<tr id="'+file+'"><td>' + icon + '</td><td><a id="nameDirectory" onclick="changeDirectory(event)">' + file + '</a></td><td>' + date.toLocaleString() + '</td></tr>')
+                        t.row.add([column1, column2, column3, column4]).draw(false);
                     } else {
-                        column1 = '<tr id="'+file+'"><td>' + icon + '</td>';
-                        column2 = '<td><a id="nameFile" onclick="openFile(event)">' + file + '</a></td>';
+                        column1 = '<tr id="' + file + '"><td>' + icon + '</td>';
+                        column2 = '<td><a id="nameFile" onclick="openFile(event)" class="drag">' + file + '</a></td>';
                         column3 = '<td>' + date.toLocaleString() + '</td>';
-                        // $("#bodyTable").append('<tr id="'+file+'"><td>' + icon + '</td><td><a id="nameFile" onclick="openFile(event)">' + file + '</a></td><td>' + date.toLocaleString() + '</td><td>' + trash + '</td></tr>')
-                        t.row.add([column1, column2, column3, trash]).draw( false );
+                        t.row.add([column1, column2, column3, trash]).draw(false);
                     }
                 })
             })
@@ -69,42 +73,108 @@ function readDirectory(directoryPath) {
     })
 }
 
+// ---------------------------- NAVIGATION -----------------------------
+
 $('#backPath').click(function () {
     var path = null;
     let lastPath = $('#inputPath').val();
     var os = detectOs();
-    if (os == 'Mac OS' || os == 'iOS' || os == 'Linux' || os == 'Android'){
+    if (os == 'Mac OS' || os == 'iOS' || os == 'Linux' || os == 'Android') {
         path = lastPath.substr(0, lastPath.lastIndexOf("/"));
-    } else{
+    } else {
         path = lastPath.substr(0, lastPath.lastIndexOf("'\'"));
     }
     readDirectory(path);
 });
 
+function changeDirectory(event) {
+    var value = $("#inputPath").val();
+    var path = paths.join(value, event.target.innerText);
+    readDirectory(path);
+}
+
+// ---------------------------- OUVERTURE FICHIER -----------------------------
+
 function openFile(event) {
     var value = $("#inputPath").val();
-    var filePath = paths.join(value,event.target.innerText);
-    var ext = filePath.substr(filePath.lastIndexOf('.') + 1);
+    var filePath = paths.join(value, event.target.innerText);
+    // Ouverture du fichier via le programme par défaut
     shell.openPath(filePath);
 }
+
+// ---------------------------- NOUVELLE FENETRE -----------------------------
 
 $('#newTab').click(function () {
     window.open('./index.html', '_blank', 'nodeIntegration=yes')
 })
 
-function changeDirectory(event) {
-    var value = $("#inputPath").val();
-    var path = paths.join(value,event.target.innerText);
-    readDirectory(path);
-}
+// ---------------------------- COPIE/COLLE FICHIER -----------------------------
 
-$(document).on('click','.deleteFile',function(){
+$(document).on('click', '.copyFile', function () {
     var name = $(this).attr('name-file');
-    var path = paths.join($("#inputPath").val(),name)
-    fs.unlink(path, function (err) {
-        if (err) throw err;
-        // if no error, file has been deleted successfully
-        console.log('File deleted!');
+    var path = paths.join($("#inputPath").val(), name)
+    // Copie du path du fichier dans le clipboard
+    clipboardy.write(path)
+    $('#pasteFile').css('display', 'inline-block');
+    swal.fire({
+        title: 'Succès !',
+        text: 'Enregistrement du fichier à copier effectué ! Veuillez le coller dans le dossier voulu',
+        icon: 'success',
+        confirmButtonText: 'Ok'
+    })
+});
+
+$(document).on('click', '#pasteFile', function () {
+    var path = $("#inputPath").val();
+    // Récupération du path copié précedemment
+    clipboardy.read().then(function (result) {
+        if (result) {
+            // Récupération du non du fichier
+            var os = detectOs();
+            if (os == 'Mac OS' || os == 'iOS' || os == 'Linux' || os == 'Android') {
+                var name = result.slice(result.lastIndexOf('/') + 1);
+            } else {
+                var name = result.slice(result.lastIndexOf("'\'") + 1);
+            }
+            var filePath = paths.join(path, name);
+            // On colle le nouveau fichier dans le path de destination
+            fs.copyFile(result, filePath, (err) => {
+                if (err) {
+                    swal.fire({
+                        title: 'Erreur !',
+                        text: 'Erreur lors de la copie du fichier',
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    })
+                }
+                swal.fire({
+                    title: 'Succès !',
+                    text: 'Le fichier a bien été copié !',
+                    icon: 'success',
+                    confirmButtonText: 'Ok'
+                })
+                readDirectory(path);
+            });
+        }
+    });
+});
+
+// ---------------------------- SUPPRESSION FICHIER -----------------------------
+
+$(document).on('click', '.deleteFile', function () {
+    var name = $(this).attr('name-file');
+    var path = $("#inputPath").val();
+    var filePath = paths.join(path, name)
+    // Suppression du fichier
+    fs.unlink(filePath, function (err) {
+        if (err) {
+            swal.fire({
+                title: 'Erreur !',
+                text: 'Erreur dans la suppression du fichier',
+                icon: 'error',
+                confirmButtonText: 'Ok'
+            })
+        }
         var line = document.getElementById(name);
         $(line).remove();
         swal.fire({
@@ -113,8 +183,11 @@ $(document).on('click','.deleteFile',function(){
             icon: 'success',
             confirmButtonText: 'Ok'
         })
+        readDirectory(path)
     });
 });
+
+// ---------------------------- DETECTION DU OS -----------------------------
 
 function detectOs() {
     var userAgent = window.navigator.userAgent,

@@ -22,6 +22,7 @@
   "dependencies": {
     "bulma": "^0.8.2",
     "chokidar": "^3.4.0",
+    "clipboardy": "^2.3.0",
     "datatables.net": "^1.10.21",
     "datatables.net-dt": "^1.10.21",
     "dragula": "^3.7.2",
