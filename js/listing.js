@@ -153,6 +153,7 @@ $(document).on('click', '#pasteFile', function () {
                     icon: 'success',
                     confirmButtonText: 'Ok'
                 })
+                $('#pasteFile').css('display','none');
                 readDirectory(path);
             });
         }
