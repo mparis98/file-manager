@@ -1,8 +1,7 @@
 const paths = require("path");
 const fs = require("fs");
 const swal = require('sweetalert2');
-const {shell} = require('electron');
-const clipboardy = require('clipboardy');
+const {shell, clipboard} = require('electron');
 
 // ---------------------------- LISTE DES FICHIERS -----------------------------
 $(document).ready(function () {
@@ -114,7 +113,7 @@ $(document).on('click', '.copyFile', function () {
     var name = $(this).attr('name-file');
     var path = paths.join($("#inputPath").val(), name)
     // Copie du path du fichier dans le clipboard
-    clipboardy.write(path)
+    clipboard.writeText(path)
     $('#pasteFile').css('display', 'inline-block');
     swal.fire({
         title: 'Succès !',
@@ -127,7 +126,7 @@ $(document).on('click', '.copyFile', function () {
 $(document).on('click', '#pasteFile', function () {
     var path = $("#inputPath").val();
     // Récupération du path copié précedemment
-    clipboardy.read().then(function (result) {
+    var result = clipboard.readText();
         if (result) {
             // Récupération du non du fichier
             var os = detectOs();
@@ -156,8 +155,7 @@ $(document).on('click', '#pasteFile', function () {
                 $('#pasteFile').css('display','none');
                 readDirectory(path);
             });
-        }
-    });
+    }
 });
 
 // ---------------------------- SUPPRESSION FICHIER -----------------------------
